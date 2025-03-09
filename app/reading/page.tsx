@@ -120,7 +120,7 @@ export default function ReadingPage() {
 
   const passage = READING_PASSAGES[passageIndex]
 
-  const { transcript, listening, startListening, stopListening, resetTranscript, hasRecognitionSupport } =
+  const { transcript, listening, startListening, stopListening, resetTranscript, hasRecognitionSupport, lastError } =
     useSpeechRecognition()
 
   useEffect(() => {
@@ -384,6 +384,35 @@ export default function ReadingPage() {
                       <p className="text-sm text-yellow-700 mt-1">
                         Test Mode has been enabled so you can still try the app.
                       </p>
+                      {permissionDenied && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2 bg-yellow-100 hover:bg-yellow-200 border-yellow-300"
+                          onClick={async () => {
+                            try {
+                              if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                                await navigator.mediaDevices.getUserMedia({ audio: true });
+                                setPermissionDenied(false);
+                                toast({
+                                  title: "Microphone Access Granted",
+                                  description: "You can now use speech recognition.",
+                                  variant: "default",
+                                });
+                              }
+                            } catch (error) {
+                              console.error("Failed to get microphone permission:", error);
+                              toast({
+                                title: "Microphone Access Denied",
+                                description: "Please allow microphone access in your browser settings.",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          Request Microphone Permission
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -458,10 +487,29 @@ export default function ReadingPage() {
               )}
             </div>
 
-            {transcript && !testMode && (
-              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm font-medium mb-2">What we heard:</p>
-                <p className="text-muted-foreground">{transcript}</p>
+            {/* Always show transcript area when listening or when there's transcript content */}
+            {(listening || transcript) && !testMode && (
+              <div className="mt-6 p-4 bg-muted/50 rounded-lg border border-primary/10">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium">What we heard:</p>
+                  {listening && (
+                    <span className="text-green-500 flex items-center gap-1 text-xs">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      Listening to your voice...
+                    </span>
+                  )}
+                </div>
+                <p className="text-muted-foreground min-h-[1.5rem]">
+                  {transcript || (listening ? "Waiting for speech..." : "")}
+                </p>
+                {lastError && (
+                  <p className="text-xs text-red-500 mt-2">
+                    Debug info: {lastError}
+                  </p>
+                )}
               </div>
             )}
           </>
