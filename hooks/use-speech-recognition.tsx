@@ -17,6 +17,7 @@ declare global {
   interface Window {
     SpeechRecognition: any
     webkitSpeechRecognition: any
+    microphoneStream: MediaStream | null
   }
 }
 
@@ -43,61 +44,69 @@ export function useSpeechRecognition(): SpeechRecognitionResult {
     if (hasSpeechRecognition && isSecureContext) {
       setHasRecognitionSupport(true)
       
-      // Initialize speech recognition
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-      const recognitionInstance = new SpeechRecognition()
+      try {
+        // Initialize speech recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+        const recognitionInstance = new SpeechRecognition()
 
-      recognitionInstance.continuous = true
-      recognitionInstance.interimResults = true
-      recognitionInstance.lang = "en-US"
+        recognitionInstance.continuous = true
+        recognitionInstance.interimResults = true
+        recognitionInstance.lang = "en-US"
 
-      // Increase maxAlternatives to improve accuracy
-      recognitionInstance.maxAlternatives = 3
+        // Increase maxAlternatives to improve accuracy
+        recognitionInstance.maxAlternatives = 3
 
-      recognitionInstance.onresult = (event: any) => {
-        console.log("Speech recognition result received", event.results.length);
-        let currentTranscript = ""
+        recognitionInstance.onresult = (event: any) => {
+          console.log("Speech recognition result received", event.results.length);
+          let currentTranscript = ""
 
-        for (let i = 0; i < event.results.length; i++) {
-          // Use the most confident result
-          currentTranscript += event.results[i][0].transcript
+          for (let i = 0; i < event.results.length; i++) {
+            // Use the most confident result
+            currentTranscript += event.results[i][0].transcript
+          }
+
+          setTranscript(currentTranscript)
         }
 
-        setTranscript(currentTranscript)
-      }
+        recognitionInstance.onerror = (event: any) => {
+          console.error("Speech recognition error", event.error)
+          setLastError(`Error: ${event.error}`)
 
-      recognitionInstance.onerror = (event: any) => {
-        console.error("Speech recognition error", event.error)
-        setLastError(`Error: ${event.error}`)
-
-        // If we get a "no-speech" error, don't stop listening
-        if (event.error !== "no-speech") {
-          setListening(false)
-        }
-      }
-
-      recognitionInstance.onend = () => {
-        console.log("Speech recognition ended, listening state:", listening);
-        // If we're still supposed to be listening, restart
-        if (listening) {
-          try {
-            console.log("Restarting speech recognition...");
-            recognitionInstance.start()
-          } catch (e) {
-            console.error("Error restarting speech recognition:", e)
-            setLastError(`Restart error: ${e}`)
+          // If we get a "no-speech" error, don't stop listening
+          if (event.error !== "no-speech") {
             setListening(false)
           }
-        } else {
-          setListening(false)
         }
-      }
 
-      recognitionInstance.onstart = () => {
-        console.log("Speech recognition started successfully");
-      }
+        recognitionInstance.onend = () => {
+          console.log("Speech recognition ended, listening state:", listening);
+          // If we're still supposed to be listening, restart
+          if (listening) {
+            try {
+              console.log("Restarting speech recognition...");
+              recognitionInstance.start()
+            } catch (e) {
+              console.error("Error restarting speech recognition:", e)
+              setLastError(`Restart error: ${e}`)
+              setListening(false)
+            }
+          } else {
+            setListening(false)
+          }
+        }
 
-      setRecognition(recognitionInstance)
+        recognitionInstance.onstart = () => {
+          console.log("Speech recognition started successfully");
+          setListening(true);
+        }
+
+        setRecognition(recognitionInstance)
+        console.log("Recognition instance created successfully");
+      } catch (err) {
+        console.error("Error initializing speech recognition:", err);
+        setLastError(`Initialization error: ${err}`);
+        setHasRecognitionSupport(false);
+      }
     } else {
       console.warn("Speech Recognition is not supported in this browser or requires a secure context (HTTPS)")
       setLastError("Speech Recognition not supported or not in secure context")
@@ -108,9 +117,17 @@ export function useSpeechRecognition(): SpeechRecognitionResult {
       if (recognition) {
         try {
           recognition.stop()
+          console.log("Recognition stopped on cleanup");
         } catch (e) {
           console.error("Error stopping speech recognition:", e)
         }
+      }
+      
+      // Also clean up any microphone stream
+      if (window.microphoneStream) {
+        window.microphoneStream.getTracks().forEach(track => track.stop());
+        window.microphoneStream = null;
+        console.log("Microphone stream released on cleanup");
       }
     }
   }, [])
@@ -130,16 +147,17 @@ export function useSpeechRecognition(): SpeechRecognitionResult {
     }
 
     try {
-      // Request microphone permission explicitly
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      // Request microphone permission explicitly if not already granted
+      if (!window.microphoneStream && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         console.log("Requesting microphone permission...");
-        await navigator.mediaDevices.getUserMedia({ audio: true })
-        console.log("Microphone permission granted");
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        window.microphoneStream = stream;
+        console.log("Microphone permission granted and stream stored");
       }
       
       console.log("Starting speech recognition instance...");
-      recognition.start()
-      setListening(true)
+      recognition.start();
+      setListening(true);
     } catch (error) {
       console.error("Error starting speech recognition:", error)
       setLastError(`Start error: ${error}`)

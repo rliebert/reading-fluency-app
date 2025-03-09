@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Volume2, CheckCircle2, ChevronRight, Settings } from "lucide-react"
+import { Volume2, CheckCircle2, ChevronRight, Settings, ArrowLeft } from "lucide-react"
 import { OpenAIVoiceSelector, type OpenAIVoiceSettings } from "@/components/openai-voice-selector"
 import { speakWithOpenAI } from "@/lib/openai-tts"
+import Link from "next/link"
 
 interface ReadingFeedbackProps {
   errors: string[]
@@ -134,9 +135,18 @@ export function ReadingFeedback({ errors, onComplete }: ReadingFeedbackProps) {
 
   return (
     <div className="flex flex-col items-center">
-      <div className="mb-6 text-center">
-        <h1 className="text-3xl font-bold text-primary mb-2">Let's Practice</h1>
-        <p className="text-lg text-muted-foreground">Let's work on some words you found tricky</p>
+      <div className="mb-6 w-full">
+        <div className="flex items-center justify-between mb-2">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="gap-1">
+              <ArrowLeft className="h-4 w-4" />
+              Back Home
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold text-primary">Let's Practice</h1>
+          <div className="w-[73px]"></div> {/* Spacer for centering */}
+        </div>
+        <p className="text-lg text-muted-foreground text-center">Let's work on some words you found tricky</p>
       </div>
 
       <div className="mb-4 flex justify-between w-full items-center">

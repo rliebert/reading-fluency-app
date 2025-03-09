@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { BookOpen, BarChart3 } from "lucide-react"
+import Image from "next/image"
 
 export default function Home() {
   return (
@@ -22,11 +23,14 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <img
-                src="/placeholder.svg?height=150&width=300"
-                alt="Child reading with dog illustration"
-                className="w-full h-[150px] object-cover rounded-md mb-4"
-              />
+              <div className="relative w-full h-[150px] rounded-md overflow-hidden mb-4">
+                <Image
+                  src="/images/child-reading.jpg"
+                  alt="Child reading illustration"
+                  fill
+                  style={{ objectFit: "cover" }}
+                />
+              </div>
             </CardContent>
             <CardFooter>
               <Link href="/reading" className="w-full">
@@ -46,11 +50,14 @@ export default function Home() {
               <CardDescription>See how your reading is improving and collect rewards!</CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <img
-                src="/placeholder.svg?height=150&width=300"
-                alt="Progress chart illustration"
-                className="w-full h-[150px] object-cover rounded-md mb-4"
-              />
+              <div className="relative w-full h-[150px] rounded-md overflow-hidden mb-4">
+                <Image
+                  src="/images/progress-chart.jpg"
+                  alt="Progress chart illustration"
+                  fill
+                  style={{ objectFit: "cover" }}
+                />
+              </div>
             </CardContent>
             <CardFooter>
               <Link href="/progress" className="w-full">
@@ -67,6 +74,10 @@ export default function Home() {
             Teachers & Parents:{" "}
             <Link href="/settings" className="text-primary hover:underline">
               Settings
+            </Link>
+            {" | "}
+            <Link href="/speech-test" className="text-primary hover:underline">
+              Speech Test
             </Link>
           </p>
         </div>

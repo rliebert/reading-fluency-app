@@ -32,7 +32,7 @@ export function TestingUtility({
   const [errorRate, setErrorRate] = useState(10)
   const [improvementFactor, setImprovementFactor] = useState(5)
   const [activePreset, setActivePreset] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState(!speechRecognitionSupported) // Auto-expand if speech recognition is not supported
+  const [expanded, setExpanded] = useState(false) // Always start collapsed
 
   // Apply preset settings
   const applyPreset = (preset: "normal" | "perfect" | "struggling" | "improving") => {

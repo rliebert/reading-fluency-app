@@ -1,9 +1,10 @@
 "use client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChevronRight, Trophy, Star, TrendingUp } from "lucide-react"
+import { ChevronRight, Trophy, Star, TrendingUp, ArrowLeft } from "lucide-react"
 import { ReadingChart } from "@/components/reading-chart"
 import { MockSessionRecorder } from "@/components/mock-session-recorder"
+import Link from "next/link"
 
 interface ReadingResultsProps {
   scores: number[]
@@ -38,9 +39,18 @@ export function ReadingResults({ scores, attempt, level, onNext }: ReadingResult
 
   return (
     <div className="flex flex-col items-center">
-      <div className="mb-6 text-center">
-        <h1 className="text-3xl font-bold text-primary mb-2">Your Results</h1>
-        <p className="text-lg text-muted-foreground">
+      <div className="mb-6 w-full">
+        <div className="flex items-center justify-between mb-2">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="gap-1">
+              <ArrowLeft className="h-4 w-4" />
+              Back Home
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold text-primary">Your Results</h1>
+          <div className="w-[73px]"></div> {/* Spacer for centering */}
+        </div>
+        <p className="text-lg text-muted-foreground text-center">
           Level: {level} | Attempt {attempt} of 3
         </p>
       </div>
