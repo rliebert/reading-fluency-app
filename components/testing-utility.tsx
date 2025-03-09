@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
-import { BugPlay, Gauge, Zap, Award, Brain } from "lucide-react"
+import { BugPlay, Gauge, Zap, Award, Brain, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 interface TestingUtilityProps {
   onSimulateReading: (options: SimulationOptions) => void
   currentPassageLevel: string
   currentAttempt: number
+  speechRecognitionSupported?: boolean
 }
 
 export interface SimulationOptions {
@@ -21,12 +22,17 @@ export interface SimulationOptions {
   simulationType: "normal" | "perfect" | "struggling" | "improving"
 }
 
-export function TestingUtility({ onSimulateReading, currentPassageLevel, currentAttempt }: TestingUtilityProps) {
+export function TestingUtility({ 
+  onSimulateReading, 
+  currentPassageLevel, 
+  currentAttempt,
+  speechRecognitionSupported = true
+}: TestingUtilityProps) {
   const [wordsPerMinute, setWordsPerMinute] = useState(40)
   const [errorRate, setErrorRate] = useState(10)
   const [improvementFactor, setImprovementFactor] = useState(5)
   const [activePreset, setActivePreset] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(!speechRecognitionSupported) // Auto-expand if speech recognition is not supported
 
   // Apply preset settings
   const applyPreset = (preset: "normal" | "perfect" | "struggling" | "improving") => {
@@ -119,6 +125,17 @@ export function TestingUtility({ onSimulateReading, currentPassageLevel, current
           </p>
         </CardHeader>
         <CardContent className="space-y-3 pt-0">
+          {!speechRecognitionSupported && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-2 mb-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-yellow-700">
+                  Speech recognition is not available. Use Test Mode to simulate reading.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-1 mb-2">
             <Badge
               variant={activePreset === "normal" ? "default" : "outline"}

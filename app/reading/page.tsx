@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { Play, Pause, RotateCcw } from "lucide-react"
+import { Play, Pause, RotateCcw, AlertTriangle } from "lucide-react"
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition"
 import { ReadingPassage } from "@/components/reading-passage"
 import { ReadingResults } from "@/components/reading-results"
@@ -113,7 +113,8 @@ export default function ReadingPage() {
   const [showReward, setShowReward] = useState(false)
   const [scores, setScores] = useState<number[]>([])
   const [errors, setErrors] = useState<string[]>([])
-  const [testMode, setTestMode] = useState(true) // Enable test mode by default
+  const [testMode, setTestMode] = useState(false) // Disable test mode by default
+  const [permissionDenied, setPermissionDenied] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -123,12 +124,15 @@ export default function ReadingPage() {
     useSpeechRecognition()
 
   useEffect(() => {
+    // Check if speech recognition is supported
     if (!hasRecognitionSupport && !testMode) {
       toast({
         title: "Speech Recognition Not Supported",
-        description: "Your browser doesn't support speech recognition. Try using Chrome or Edge.",
+        description: "Your browser doesn't support speech recognition. Try using Chrome or Edge, or enable Test Mode.",
         variant: "destructive",
       })
+      // Automatically enable test mode if speech recognition is not supported
+      setTestMode(true)
     }
 
     // Create audio elements
@@ -138,8 +142,10 @@ export default function ReadingPage() {
       if (timerRef.current) {
         clearInterval(timerRef.current)
       }
+      // Make sure to stop listening when component unmounts
+      stopListening()
     }
-  }, [hasRecognitionSupport, toast, testMode])
+  }, [hasRecognitionSupport, toast, testMode, stopListening])
 
   const handleSegmentChange = (newIndex: number) => {
     if (newIndex >= 0 && newIndex < passage.text.length) {
@@ -147,12 +153,24 @@ export default function ReadingPage() {
     }
   }
 
-  const startReading = () => {
+  const startReading = async () => {
     setIsReading(true)
     resetTranscript()
 
     if (!testMode) {
-      startListening()
+      try {
+        await startListening()
+      } catch (error) {
+        console.error("Failed to start listening:", error)
+        toast({
+          title: "Microphone Access Denied",
+          description: "Please allow microphone access to use speech recognition, or enable Test Mode.",
+          variant: "destructive",
+        })
+        setPermissionDenied(true)
+        setIsReading(false)
+        return
+      }
     }
 
     setTimeLeft(60)
@@ -352,6 +370,25 @@ export default function ReadingPage() {
                 <span>Attempt: {attempt} of 3</span>
               </div>
 
+              {(!hasRecognitionSupport || permissionDenied) && (
+                <div className="w-full mt-4 p-3 bg-yellow-50 border border-yellow-300 rounded-md">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-yellow-800">Speech Recognition Unavailable</p>
+                      <p className="text-sm text-yellow-700">
+                        {permissionDenied 
+                          ? "Microphone access was denied. Please allow microphone access in your browser settings."
+                          : "Your browser doesn't support speech recognition. Try using Chrome or Edge."}
+                      </p>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        Test Mode has been enabled so you can still try the app.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="w-full mt-4">
                 <div className="flex justify-between text-sm mb-1">
                   <span>Time left: {timeLeft} seconds</span>
@@ -435,6 +472,7 @@ export default function ReadingPage() {
           onSimulateReading={handleSimulateReading}
           currentPassageLevel={passage.level}
           currentAttempt={attempt}
+          speechRecognitionSupported={hasRecognitionSupport && !permissionDenied}
         />
       </div>
     </div>

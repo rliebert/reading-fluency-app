@@ -5,10 +5,18 @@ import { useState, useEffect, useCallback } from "react"
 interface SpeechRecognitionResult {
   transcript: string
   listening: boolean
-  startListening: () => void
+  startListening: () => Promise<void>
   stopListening: () => void
   resetTranscript: () => void
   hasRecognitionSupport: boolean
+}
+
+// Define the SpeechRecognition types for TypeScript
+declare global {
+  interface Window {
+    SpeechRecognition: any
+    webkitSpeechRecognition: any
+  }
 }
 
 export function useSpeechRecognition(): SpeechRecognitionResult {
@@ -17,11 +25,15 @@ export function useSpeechRecognition(): SpeechRecognitionResult {
   const [hasRecognitionSupport, setHasRecognitionSupport] = useState(false)
   const [recognition, setRecognition] = useState<any>(null)
 
+  // Initialize speech recognition
   useEffect(() => {
-    // Check if browser supports speech recognition
-    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+    // Check if browser supports speech recognition and if we're in a secure context
+    if (typeof window !== 'undefined' && 
+        (window.SpeechRecognition || window.webkitSpeechRecognition) && 
+        (window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
+      
       setHasRecognitionSupport(true)
-
+      
       // Initialize speech recognition
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
       const recognitionInstance = new SpeechRecognition()
@@ -68,29 +80,53 @@ export function useSpeechRecognition(): SpeechRecognitionResult {
       }
 
       setRecognition(recognitionInstance)
+    } else {
+      console.warn("Speech Recognition is not supported in this browser or requires a secure context (HTTPS)")
+      setHasRecognitionSupport(false)
     }
 
     return () => {
       if (recognition) {
-        recognition.stop()
+        try {
+          recognition.stop()
+        } catch (e) {
+          console.error("Error stopping speech recognition:", e)
+        }
       }
     }
-  }, [listening])
+  }, [])
 
-  const startListening = useCallback(() => {
-    if (recognition && !listening) {
-      try {
-        recognition.start()
-        setListening(true)
-      } catch (error) {
-        console.error("Error starting speech recognition:", error)
+  const startListening = useCallback(async () => {
+    if (!recognition) {
+      console.error("Speech recognition not initialized")
+      return
+    }
+
+    if (listening) {
+      return // Already listening
+    }
+
+    try {
+      // Request microphone permission explicitly
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        await navigator.mediaDevices.getUserMedia({ audio: true })
       }
+      
+      recognition.start()
+      setListening(true)
+    } catch (error) {
+      console.error("Error starting speech recognition:", error)
+      setListening(false)
     }
   }, [recognition, listening])
 
   const stopListening = useCallback(() => {
     if (recognition && listening) {
-      recognition.stop()
+      try {
+        recognition.stop()
+      } catch (e) {
+        console.error("Error stopping speech recognition:", e)
+      }
       setListening(false)
     }
   }, [recognition, listening])
