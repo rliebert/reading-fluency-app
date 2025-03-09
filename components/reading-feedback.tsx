@@ -12,42 +12,50 @@ interface ReadingFeedbackProps {
   onComplete: () => void
 }
 
+// Default voice settings
+const defaultVoiceSettings: OpenAIVoiceSettings = {
+  voice: "nova",
+  speed: 1.0,
+  model: "tts-1",
+  teacherPersonality: "enthusiastic",
+  preferredAccent: "american",
+}
+
 export function ReadingFeedback({ errors, onComplete }: ReadingFeedbackProps) {
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [hasSpoken, setHasSpoken] = useState(false)
   const [showVoiceSettings, setShowVoiceSettings] = useState(false)
-  const [voiceSettings, setVoiceSettings] = useState<OpenAIVoiceSettings>(() => {
-    // Try to load from localStorage
-    const savedSettings = localStorage.getItem("openaiVoiceSettings")
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings)
-        return {
-          voice: parsed.voice || "nova",
-          speed: parsed.speed || 1.0,
-          model: parsed.model || "tts-1",
-          teacherPersonality: parsed.teacherPersonality || "enthusiastic",
-          preferredAccent: parsed.preferredAccent || "american",
+  const [voiceSettings, setVoiceSettings] = useState<OpenAIVoiceSettings>(defaultVoiceSettings)
+
+  // Load settings from localStorage only on the client side
+  useEffect(() => {
+    // Check if we're in the browser environment
+    if (typeof window !== 'undefined') {
+      const savedSettings = localStorage.getItem("openaiVoiceSettings")
+      if (savedSettings) {
+        try {
+          const parsed = JSON.parse(savedSettings)
+          setVoiceSettings({
+            voice: parsed.voice || defaultVoiceSettings.voice,
+            speed: parsed.speed || defaultVoiceSettings.speed,
+            model: parsed.model || defaultVoiceSettings.model,
+            teacherPersonality: parsed.teacherPersonality || defaultVoiceSettings.teacherPersonality,
+            preferredAccent: parsed.preferredAccent || defaultVoiceSettings.preferredAccent,
+          })
+        } catch (e) {
+          console.error("Error parsing voice settings:", e)
         }
-      } catch (e) {
-        console.error("Error parsing voice settings:", e)
       }
     }
-
-    // Default settings
-    return {
-      voice: "nova",
-      speed: 1.0,
-      model: "tts-1",
-      teacherPersonality: "enthusiastic",
-      preferredAccent: "american",
-    }
-  })
+  }, [])
 
   // Save voice settings to localStorage when they change
   useEffect(() => {
-    localStorage.setItem("openaiVoiceSettings", JSON.stringify(voiceSettings))
+    // Check if we're in the browser environment
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("openaiVoiceSettings", JSON.stringify(voiceSettings))
+    }
   }, [voiceSettings])
 
   // Clean up speech synthesis on unmount
